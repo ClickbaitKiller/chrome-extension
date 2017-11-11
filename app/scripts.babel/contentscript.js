@@ -2,7 +2,7 @@
 
 
 
-let originHref = location.origin;
+let originHref = location.href;
 
 /*
 * API
@@ -11,32 +11,24 @@ const Api = function() {
 
 };
 
+Api.prototype.getInfo = function(id, link, cb) {
+    setTimeout(function() {
 
-Api.prototype.getInfo = function(link, cb) {
-  let r = Math.random();
-  let time = Math.random()*400;
+      return {
+        id: id,
+        link: link,
+        html: "<h2>Hello + "+parseInt(Math.random()*1000)+"</h2>"
+      }
+
+    }, Math.random()*400);
+};
+
+
+Api.prototype.getScores = function(links, cb) {
 
   setTimeout(function() {
-
-    if(r < 0.3) {
-      cb({
-        score: 0.6,
-        summary:"100% bullshit",
-        id: link.id
-      });
-    } else if(r < 0.45) {
-      cb({
-        score:0.8,
-        summary:'10 Reasons why Britney spears cut her hair',
-        list: ['She sucks', 'She sucks hard', 'Fuck her', "She's a bitch"],
-        id: link.id
-      });
-    } else {
-      cb({
-
-      });
-    }
-  }, time);
+    cb(links.map(link => { link.score = Math.random(); return link; }));
+  }, 300);
 
 };
 
@@ -47,58 +39,67 @@ let api = new Api();
 /* LINK parser */
 
 
-let links = [...document.body.getElementsByTagName("a")];
+let links = [];
 let linksAnalysed = {};
+let allLinksTag = {};
+let cleanLinks = [];
+let cleanTags = {};
 
 let fetchLinkAnalysis = function() {
 
+  links = [...$('a')];
+  console.log('Fetch all links');
+
+  cleanLinks = links.map((link) => {
+    let id = parseInt(Math.random() * 10000000);
+
+    link.setAttribute('data-killer-id', id);
+
+    return {
+      href: link.href,
+      text: link.innerText,
+      id: id,
+    }
+  }).filter(link => {
+    return link.href && link.href.indexOf('javascript:') === -1 && link.text && !link.href.startsWith('/') && link.href !== originHref+'#';
+  });
+
+  cleanTags = cleanLinks.reduce((obj, subObj) => {
+    obj[subObj.id] = subObj;
+    return obj;
+  }, {});
+
+  api.getScores(cleanLinks, function(scores) {
+    scores.forEach(score => {
+      updatLinkUI(score.id, score.score);
+    });
+  });
+
 };
-let cleanLinks = links.map((link, i) => {
-  link.setAttribute('data-id', i);
-  return {
-    href: link.href,
-    text: link.innerText,
-    id: i
-  }
-}).filter(link => {
-  return link.href.indexOf('javascript:') === -1
-    && link.text
-      && !link.href.startsWith('/')
-    && !link.href.startsWith(originHref)
-    && !link.href.startsWith('#');
-});
 
-
-
-cleanLinks.forEach(link => {
-  api.getInfo(link, function(linkInfo) {
-    linksAnalysed[linkInfo.id] = linkInfo;
-    updatLinkUI(linkInfo);
-  })
-});
-
-
-setTimeout(function() {
-  console.log(linksAnalysed);
-}, 2000);
-
-let imgLink = cleanLinks.find(link => {
-  return link.href.indexOf('imgur') !== -1;
-});
+setInterval(fetchLinkAnalysis, 5000);
 
 
 let killerPngSrc = chrome.extension.getURL('/images/killer.png');
+let killerPngSrcBad = chrome.extension.getURL('/images/killer-bad.png');
 
-let updatLinkUI = function(linkInfo) {
+let updatLinkUI = function(id, score) {
 
-  if(linkInfo.score >= 0) {
-    $(links[linkInfo.id]).prepend(
-      $('<img>', {
-        src: killerPngSrc,
-        class:'killer-mini-icon',
-        'data-id': linkInfo.id
-      }));
-  }
+  if(score >= 0) {
+    let imgUrl = killerPngSrc;
+
+    if(score > 0.8) {
+      imgUrl = killerPngSrcBad;
+    }
+
+
+    $('[data-killer-id='+id+']').prepend(
+        $('<img>', {
+          src: imgUrl,
+          class:'killer-mini-icon',
+          'data-id': id
+        }));
+    }
 
 };
 
