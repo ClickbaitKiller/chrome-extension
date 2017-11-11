@@ -1,6 +1,6 @@
 <style>
 
-  #killer-icon {
+  #killer-icon, #killer-icon-laser {
     position: fixed;
     top: 0;
     left: 0;
@@ -8,6 +8,16 @@
     transition: all 1s;
     width:50px;
     cursor:pointer;
+  }
+
+
+  #killer-icon-laser {
+    -webkit-animation-delay: 15s;
+    -moz-animation-delay: 15s;
+    -o-animation-delay: 15s;
+    animation-delay: 15s;
+    left:-10%;
+    width:80px;
   }
 
   #killer-icon:hover {
@@ -50,9 +60,12 @@
     display:none;
   }
 
+
   @keyframes rotate {
     0% {transform:rotate(0deg)}
+    20% {transform:rotate(0deg)}
     50% {transform:rotate(720deg)}
+    80% {transform:rotate(720deg)}
     100% {transform:rotate(0deg)}
   }
 
@@ -62,10 +75,6 @@
 
 <div id="killer-popup">
 
-  <h3 id="summary"></h3>
-
-  <ol id="list" type="1">
-
-  </ol>
+  <div id="summary"></div>
 
 </div>

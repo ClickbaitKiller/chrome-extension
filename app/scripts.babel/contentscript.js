@@ -4,6 +4,8 @@
 
 let originHref = location.href;
 
+console.log('Oring href', originHref);
+
 /*
 * API
 * */
@@ -19,63 +21,42 @@ Api.prototype.getInfo = function(id, link, cb) {
     return cb(cache[id]);
   }
 
-
-  $.ajax({
-        url: 'http://localhost:8888/info/'+id,
-        method:'POST',
-        dataType:'application/json',
-        data: {id:id, link:link},
-        success: function(data) {
-          cb(data);
-        },
-        error: function() {
-          console.log('Cant get info '+id);
-        }
-   });
-
   chrome.runtime.sendMessage({
            method: 'POST',
            action: 'xhttp',
-           url: 'http://localhost:8888/info/'+id,
-           data: {id:id, link:link},
-         }, function(reponseText) {
-            alert(reponseText);
-          });
+           contentType:'text/plain',
+           url: 'http://localhost:8080/v2/summary',
+           data: link,
+         }, function(resp) {
 
-
-  setTimeout(function() {
-
-      let resp = {
-        html: "<h2>Hello + "+parseInt(Math.random()*1000)+"</h2> <p>On se met bien</p>"
-      };
-
-      cache[id] = resp;
-
-      cb(resp);
-
-    }, Math.random()*400);
+        console.log('RESP', resp);
+        cache[id] = resp;
+        cb(resp);
+  });
 };
 
 
 Api.prototype.getScores = function(links, cb) {
+  console.log('LINKS', links);
+  chrome.runtime.sendMessage({
+                               method: 'POST',
+                               action: 'xhttp',
+                               url: 'http://localhost:8080/v2/detect',
+                               contentType:'application/json',
+                               data: JSON.stringify(links),
+                             }, function(response) {
 
-  $.ajax({
-     url: 'http://localhost:8888/scores',
-     method:'POST',
-     dataType:'application/json',
-     data: links,
-     success: function(data) {
-       cb(data);
-     },
-    error: function() {
-       console.log('Cant get scores');
-    }
-   });
+    cb(response);
+
+    //console.log(reponseText);
+  });
 
 
+  /*
   setTimeout(function() {
     cb(links.map(link => { link.score = Math.random(); return link; }));
   }, 300);
+  */
 
 };
 
@@ -107,11 +88,22 @@ let fetchLinkAnalysis = function() {
     return {
       href: link.href,
       text: link.innerText,
-      id: id,
+      id: parseInt(id),
     }
   }).filter(link => {
-    return link.href && link.href.indexOf('javascript:') === -1 && link.text && !link.href.startsWith('/') && link.href !== originHref+'#';
+    return link.href && link.href.indexOf('javascript:') === -1
+      && link.text && link.text.split(' ').length >= 4
+      && !link.href.startsWith(originHref);
   });
+
+  //Remote empty links (faceboo shit)
+  links.forEach(link => {
+    if(!link.text) {
+      $(link).remove();
+    }
+  });
+
+  console.log('Clean links', cleanLinks);
 
   cleanTags = cleanLinks.reduce((obj, subObj) => {
     obj[subObj.id] = subObj;
@@ -125,6 +117,8 @@ let fetchLinkAnalysis = function() {
 
 
   api.getScores(linksToSendForScoring, function(scores) {
+    console.log('SCORES', scores);
+
     scores.forEach(score => {
 
       linksScored[score.id] = score;
@@ -139,11 +133,12 @@ let fetchLinkAnalysis = function() {
 };
 
 fetchLinkAnalysis();
-setInterval(fetchLinkAnalysis, 4000);
+setInterval(fetchLinkAnalysis, 6000);
 
 
 let killerPngSrc = chrome.extension.getURL('/images/killer.png');
 let killerPngSrcBad = chrome.extension.getURL('/images/killer-bad.png');
+let killerPngLaser = chrome.extension.getURL('/images/killer-laser.png');
 let explosionPngSrc = chrome.extension.getURL('/images/explosion.gif');
 
 let updatLinkUI = function(id, score) {
@@ -178,29 +173,24 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
   // $($.parseHTML(data)).appendTo('body');
 
   $('#killer-icon')[0].src = killerPngSrc;
+  //$('#killer-icon-laser')[0].src = killerPngLaser;
 
 
   let $killerPopup = $('#killer-popup');
   let $summary = $('#summary');
   let $list = $('#list');
 
-  function renderPopup(data, e) {
+  function renderPopup(html, e) {
 
-    let red = parseInt(data.score * 255);
-    let color = 'rgb('+red+', 150,150)';
+    //let red = parseInt(data.score * 255);
+    let color = 'rgb('+150+', 150,150)';
 
-    $summary.html(data.html);
-
-    if(data.list && data.list.length > 0) {
-      $list.html(data.list.map(text => { return $('<li>').text(text); })).fadeIn();
-    } else {
-      $list.hide();
-    }
+    $summary.html(html);
 
     $killerPopup.css({
-                        'border': '1px solid '+color,
+                       'border': '1px solid '+color,
                        'left': e.clientX,
-                       'top': e.clientY+5
+                       'top': e.clientY+15
     }).show();
 
   }
@@ -220,11 +210,9 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
     $('.explosion-icon[data-id='+id+']').show();
 
     (function(linkAnalysed) {
-      api.getInfo(linkAnalysed.id, linkAnalysed.href, function(info) {
+      api.getInfo(linkAnalysed.id, linkAnalysed.href, function(html) {
 
-        info.score = linkAnalysed.score;
-
-        renderPopup(info, e);
+        renderPopup(html, e);
       });
     }(linkAnalysed));
   });
@@ -234,5 +222,34 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
     $('.explosion-icon').hide();
   });
 
+
+  let animateKiller = function() {
+    let left = parseInt(Math.random()*100);
+    let top = parseInt(Math.random()*100);
+    let duration = parseInt(Math.random()*10000) + 2000;
+
+    let width = (Math.random() + 0.8) * 50;
+    let deg = parseInt(-60 + Math.random() * 120);
+
+    let opacity = Math.random() < 0.3 ? 0 : 1;
+
+    if(opacity == 0) {
+      duration = 1500;
+    }
+
+    console.log('Animation duration', duration);
+
+    $('#killer-icon').css({
+      left:left+"%", top: top+"%", 'transform': 'rotate('+deg+'deg)', opacity:opacity, width: width, transition: 'all '+duration/1000+'s'
+    });
+
+
+    setTimeout(function() {
+      animateKiller();
+    }, duration);
+
+  };
+
+  animateKiller();
 
 });
