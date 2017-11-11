@@ -15,10 +15,27 @@
     width:50px;
   }
 
+  #killer-popup {
+    position:absolute;
+    display:none;
+    z-index: 99999;
+    padding:8px;
+    border-radius:3px;
+    top: 40%;
+    left: 40%;
+    background-color:white;
+  }
+
 </style>
 
-<h2>
-  I'm the killer
+<img id="killer-icon" alt="">
 
-  <img id="killer-icon" alt="">
-</h2>
+<div id="killer-popup">
+
+  <h3 id="summary"></h3>
+
+  <ol id="list" type="1">
+
+  </ol>
+
+</div>
