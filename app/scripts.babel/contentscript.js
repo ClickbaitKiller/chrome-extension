@@ -40,7 +40,7 @@ let api = new Api();
 
 
 let links = [];
-let linksAnalysed = {};
+let linksScored = {};
 let allLinksTag = {};
 let cleanLinks = [];
 let cleanTags = {};
@@ -51,9 +51,11 @@ let fetchLinkAnalysis = function() {
   console.log('Fetch all links');
 
   cleanLinks = links.map((link) => {
-    let id = parseInt(Math.random() * 10000000);
-
-    link.setAttribute('data-killer-id', id);
+    let id = link.getAttribute('data-killer-id');
+    if(!id) {
+      id = parseInt(Math.random() * 10000000);
+      link.setAttribute('data-killer-id', id);
+    }
 
     return {
       href: link.href,
@@ -69,15 +71,28 @@ let fetchLinkAnalysis = function() {
     return obj;
   }, {});
 
-  api.getScores(cleanLinks, function(scores) {
+
+  let linksToSendForScoring = cleanLinks.filter(el => {
+    return !linksScored[el.id]
+  });
+
+
+  api.getScores(linksToSendForScoring, function(scores) {
     scores.forEach(score => {
-      updatLinkUI(score.id, score.score);
+
+      linksScored[score.id] = score;
+
+      if(score.score > 0.5) {
+        updatLinkUI(score.id, score.score);
+      }
     });
+
   });
 
 };
 
-setInterval(fetchLinkAnalysis, 5000);
+fetchLinkAnalysis();
+setInterval(fetchLinkAnalysis, 4000);
 
 
 let killerPngSrc = chrome.extension.getURL('/images/killer.png');
@@ -85,7 +100,6 @@ let killerPngSrcBad = chrome.extension.getURL('/images/killer-bad.png');
 
 let updatLinkUI = function(id, score) {
 
-  if(score >= 0) {
     let imgUrl = killerPngSrc;
 
     if(score > 0.8) {
@@ -99,7 +113,6 @@ let updatLinkUI = function(id, score) {
           class:'killer-mini-icon',
           'data-id': id
         }));
-    }
 
 };
 
@@ -146,7 +159,9 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
   $(document.body).on('mouseover', '.killer-mini-icon', function(e) {
     let id = $(this).attr('data-id');
 
-    let linkAnalysed = linksAnalysed[id];
+    let linkAnalysed = linksScored[id];
+
+    api.getInfo()
 
     if(linkAnalysed && linkAnalysed.score && (linkAnalysed.summary || (linkAnalysed.list && linkAnalysed.list.length>0))) {
       console.log(linkAnalysed);
