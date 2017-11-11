@@ -2,13 +2,11 @@
 
 
 
-let originHref = 'https://artmyn.com/partners/cultural';
+let originHref = location.origin;
 
 /*
 * API
 * */
-
-
 const Api = function() {
 
 };
@@ -22,12 +20,11 @@ Api.prototype.getInfo = function(link, cb) {
 
     if(r < 0.3) {
       cb({
-        score: 0.2,
-        summary: '',
-        list: [],
+        score: 0.6,
+        summary:"100% bullshit",
         id: link.id
       });
-    } else if(r < 0.6) {
+    } else if(r < 0.45) {
       cb({
         score:0.8,
         summary:'10 Reasons why Britney spears cut her hair',
@@ -36,9 +33,7 @@ Api.prototype.getInfo = function(link, cb) {
       });
     } else {
       cb({
-        score:0.7,
-        summary:"Summary of link",
-        id: link.id
+
       });
     }
   }, time);
@@ -53,8 +48,11 @@ let api = new Api();
 
 
 let links = [...document.body.getElementsByTagName("a")];
+let linksAnalysed = {};
 
+let fetchLinkAnalysis = function() {
 
+};
 let cleanLinks = links.map((link, i) => {
   link.setAttribute('data-id', i);
   return {
@@ -63,10 +61,15 @@ let cleanLinks = links.map((link, i) => {
     id: i
   }
 }).filter(link => {
-  return link.href.indexOf('javascript:') === -1 && link.text && link.href !== originHref && !link.href.startsWith('#');
+  return link.href.indexOf('javascript:') === -1
+    && link.text
+      && !link.href.startsWith('/')
+    && !link.href.startsWith(originHref)
+    && !link.href.startsWith('#');
 });
 
-let linksAnalysed = {};
+
+
 cleanLinks.forEach(link => {
   api.getInfo(link, function(linkInfo) {
     linksAnalysed[linkInfo.id] = linkInfo;
@@ -74,7 +77,6 @@ cleanLinks.forEach(link => {
   })
 });
 
-let linksMap = cleanLinks.reduce((finalObj, item) => {finalObj[item.id] = item; return finalObj}, {});
 
 setTimeout(function() {
   console.log(linksAnalysed);
@@ -84,16 +86,18 @@ let imgLink = cleanLinks.find(link => {
   return link.href.indexOf('imgur') !== -1;
 });
 
-console.log(cleanLinks);
-console.log(imgLink);
 
 let killerPngSrc = chrome.extension.getURL('/images/killer.png');
 
 let updatLinkUI = function(linkInfo) {
 
-  if(linkInfo.score >= 0.6) {
-    console.log('pwnd');
-    $(links[linkInfo.id]).prepend($('<img>', {src: killerPngSrc}));
+  if(linkInfo.score >= 0) {
+    $(links[linkInfo.id]).prepend(
+      $('<img>', {
+        src: killerPngSrc,
+        class:'killer-mini-icon',
+        'data-id': linkInfo.id
+      }));
   }
 
 };
@@ -111,7 +115,7 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
   let $summary = $('#summary');
   let $list = $('#list');
 
-  function renderPopup(data) {
+  function renderPopup(data, e) {
     let red = parseInt(data.score * 255);
     let color = 'rgb('+red+', 150,150)';
 
@@ -123,7 +127,11 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
       $list.hide();
     }
 
-    $killerPopup.css('border', '1px solid '+color).show();
+    $killerPopup.css({
+                        'border': '1px solid '+color,
+                       'left': e.clientX,
+                       'top': e.clientY+5
+    }).show();
 
   }
 
@@ -134,19 +142,21 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
 
   /* API requests */
 
-  $('a').on('mouseover', function() {
+  $(document.body).on('mouseover', '.killer-mini-icon', function(e) {
     let id = $(this).attr('data-id');
 
     let linkAnalysed = linksAnalysed[id];
 
-    if(linkAnalysed) {
-      renderPopup(linkAnalysed);
+    if(linkAnalysed && linkAnalysed.score && (linkAnalysed.summary || (linkAnalysed.list && linkAnalysed.list.length>0))) {
+      console.log(linkAnalysed);
+      renderPopup(linkAnalysed, e);
     } else {
-      //hidePopup();
+      hidePopup();
     }
+  });
 
-    console.log('ID', id, linkAnalysed);
-
+  $(document.body).on('mouseleave', '.killer-mini-icon', function(e) {
+    hidePopup();
   });
 
 });
