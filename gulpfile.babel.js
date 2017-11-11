@@ -106,7 +106,7 @@ gulp.task('watch', ['babel'], () => {
     'app/_locales/**/*.json'
   ]).on('change', $.livereload.reload);
 
-  gulp.watch('app/scripts.babel/**/*.js', ['lint', 'babel']);
+  gulp.watch('app/scripts.babel/**/*.js', ['babel']);
   gulp.watch('bower.json', ['wiredep']);
 });
 

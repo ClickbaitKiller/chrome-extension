@@ -49,6 +49,7 @@
         "https://*/*"
       ],
       "js": [
+        "scripts/vendor/jquery.min.js",
         "scripts/contentscript.js"
       ],
       "run_at": "document_end",
@@ -68,6 +69,7 @@
   },
   "web_accessible_resources": [
     "images/icon-48.png",
+    "images/killer.png",
     "html/clickbait-killer.html"
   ]
 }
