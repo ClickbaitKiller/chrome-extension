@@ -1,18 +1,19 @@
 <style>
 
   #killer-icon {
-    width: 140px;
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     z-index: 99999;
     transition: all 1s;
+    width:50px;
+    cursor:pointer;
   }
 
-  #killer-icon.discrete {
+  #killer-icon:hover {
     top:0;
     left:0;
-    width:50px;
+    width:130px;
   }
 
   #killer-popup {
@@ -25,6 +26,11 @@
     left: 40%;
     background-color:white;
     transform: translateX(-50%);
+    pointer-events: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 
   .killer-mini-icon {
@@ -35,6 +41,19 @@
 
   .killer-mini-icon:hover {
     height:38px;
+
+    animation: rotate 2s infinite;
+  }
+
+  .explosion-icon {
+    height:32px;
+    display:none;
+  }
+
+  @keyframes rotate {
+    0% {transform:rotate(0deg)}
+    50% {transform:rotate(720deg)}
+    100% {transform:rotate(0deg)}
   }
 
 </style>

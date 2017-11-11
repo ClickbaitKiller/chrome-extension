@@ -11,20 +11,67 @@ const Api = function() {
 
 };
 
-Api.prototype.getInfo = function(id, link, cb) {
-    setTimeout(function() {
+let cache = {};
 
-      return {
-        id: id,
-        link: link,
-        html: "<h2>Hello + "+parseInt(Math.random()*1000)+"</h2>"
-      }
+Api.prototype.getInfo = function(id, link, cb) {
+
+  if(cache[id]) {
+    return cb(cache[id]);
+  }
+
+
+  $.ajax({
+        url: 'http://localhost:8888/info/'+id,
+        method:'POST',
+        dataType:'application/json',
+        data: {id:id, link:link},
+        success: function(data) {
+          cb(data);
+        },
+        error: function() {
+          console.log('Cant get info '+id);
+        }
+   });
+
+  chrome.runtime.sendMessage({
+           method: 'POST',
+           action: 'xhttp',
+           url: 'http://localhost:8888/info/'+id,
+           data: {id:id, link:link},
+         }, function(reponseText) {
+            alert(reponseText);
+          });
+
+
+  setTimeout(function() {
+
+      let resp = {
+        html: "<h2>Hello + "+parseInt(Math.random()*1000)+"</h2> <p>On se met bien</p>"
+      };
+
+      cache[id] = resp;
+
+      cb(resp);
 
     }, Math.random()*400);
 };
 
 
 Api.prototype.getScores = function(links, cb) {
+
+  $.ajax({
+     url: 'http://localhost:8888/scores',
+     method:'POST',
+     dataType:'application/json',
+     data: links,
+     success: function(data) {
+       cb(data);
+     },
+    error: function() {
+       console.log('Cant get scores');
+    }
+   });
+
 
   setTimeout(function() {
     cb(links.map(link => { link.score = Math.random(); return link; }));
@@ -97,22 +144,30 @@ setInterval(fetchLinkAnalysis, 4000);
 
 let killerPngSrc = chrome.extension.getURL('/images/killer.png');
 let killerPngSrcBad = chrome.extension.getURL('/images/killer-bad.png');
+let explosionPngSrc = chrome.extension.getURL('/images/explosion.gif');
 
 let updatLinkUI = function(id, score) {
 
     let imgUrl = killerPngSrc;
 
-    if(score > 0.8) {
+    if(score >= 0.75) {
       imgUrl = killerPngSrcBad;
     }
 
+    let $elem = $('[data-killer-id='+id+']');
 
-    $('[data-killer-id='+id+']').prepend(
+    let $explosion = $('<img>', {
+      src: explosionPngSrc,
+      class:'explosion-icon',
+      'data-id': id
+    });
+
+    $elem.prepend(
         $('<img>', {
           src: imgUrl,
           class:'killer-mini-icon',
           'data-id': id
-        }));
+        }), $explosion);
 
 };
 
@@ -130,13 +185,14 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
   let $list = $('#list');
 
   function renderPopup(data, e) {
+
     let red = parseInt(data.score * 255);
     let color = 'rgb('+red+', 150,150)';
 
-    $summary.text(data.summary);
+    $summary.html(data.html);
 
     if(data.list && data.list.length > 0) {
-      $list.html(data.list.map(text => { return $('<li>').text(text); })).show();
+      $list.html(data.list.map(text => { return $('<li>').text(text); })).fadeIn();
     } else {
       $list.hide();
     }
@@ -161,18 +217,22 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
 
     let linkAnalysed = linksScored[id];
 
-    api.getInfo()
+    $('.explosion-icon[data-id='+id+']').show();
 
-    if(linkAnalysed && linkAnalysed.score && (linkAnalysed.summary || (linkAnalysed.list && linkAnalysed.list.length>0))) {
-      console.log(linkAnalysed);
-      renderPopup(linkAnalysed, e);
-    } else {
-      hidePopup();
-    }
+    (function(linkAnalysed) {
+      api.getInfo(linkAnalysed.id, linkAnalysed.href, function(info) {
+
+        info.score = linkAnalysed.score;
+
+        renderPopup(info, e);
+      });
+    }(linkAnalysed));
   });
 
   $(document.body).on('mouseleave', '.killer-mini-icon', function(e) {
     hidePopup();
+    $('.explosion-icon').hide();
   });
+
 
 });
