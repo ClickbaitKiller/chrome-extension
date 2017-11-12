@@ -98,8 +98,9 @@ let fetchLinkAnalysis = function() {
 
   //Remote empty links (faceboo shit)
   links.forEach(link => {
-    if(!link.text) {
-      $(link).remove();
+    if(!link.text && link.children.length === 0 && !link.hasAttribute('data-hover')) {
+      //console.log(link);
+      $(link).css('display', 'none');
     }
   });
 
@@ -133,7 +134,7 @@ let fetchLinkAnalysis = function() {
 };
 
 fetchLinkAnalysis();
-setInterval(fetchLinkAnalysis, 6000);
+setInterval(fetchLinkAnalysis, 10000);
 
 
 let killerPngSrc = chrome.extension.getURL('/images/killer.png');
