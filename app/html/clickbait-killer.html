@@ -27,7 +27,7 @@
   }
 
   #killer-popup {
-    position:fixed;
+    position:absolute;
     display:none;
     z-index: 99999;
     padding:8px;
@@ -35,12 +35,14 @@
     top: 40%;
     left: 40%;
     background-color:white;
-    transform: translateX(-50%);
+    /*transform: translateX(-50%);*/
     pointer-events: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    max-width:400px;
+    font-size: 15px;
   }
 
   .killer-mini-icon {

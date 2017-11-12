@@ -21,8 +21,6 @@ Api.prototype.getInfo = function(linkObj, cb) {
     return cb(cache[linkObj.id]);
   }
 
-  console.log(linkObj);
-
   chrome.runtime.sendMessage({
            method: 'POST',
            action: 'xhttp',
@@ -42,7 +40,6 @@ Api.prototype.getInfo = function(linkObj, cb) {
 
 
 Api.prototype.getScores = function(links, cb) {
-  console.log('LINKS', links);
   chrome.runtime.sendMessage({
                                method: 'POST',
                                action: 'xhttp',
@@ -81,7 +78,6 @@ let cleanTags = {};
 let fetchLinkAnalysis = function() {
 
   links = [...$('a')];
-  console.log('Fetch all links');
 
   cleanLinks = links.map((link) => {
     let id = link.getAttribute('data-killer-id');
@@ -109,8 +105,6 @@ let fetchLinkAnalysis = function() {
     }
   });
 
-  console.log('Clean links', cleanLinks);
-
   cleanTags = cleanLinks.reduce((obj, subObj) => {
     obj[subObj.id] = subObj;
     return obj;
@@ -125,13 +119,12 @@ let fetchLinkAnalysis = function() {
   if(linksToSendForScoring.length > 0) {
 
     api.getScores(linksToSendForScoring, function(scores) {
-      console.log('SCORES', scores);
 
       scores.forEach(score => {
 
         linksScored[score.id] = score;
 
-        if(score.score > 0.5) {
+        if(score.score >= 0.5) {
           updatLinkUI(score.id, score.score);
         }
       });
@@ -199,8 +192,8 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
 
     $killerPopup.css({
                        'border': '1px solid '+color,
-                       'left': e.clientX,
-                       'top': e.clientY+15
+                       'left': e.target.offsetLeft,
+                       'top': e.target.offsetTop+40
     }).show();
 
   }
@@ -227,13 +220,13 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
         if(obj && obj.summary) {
           renderPopup(obj.summary, e);
         } else {
-          renderPopup('<h3>This website is all images!! DAMM</h3>');
+          renderPopup("<h3>Can't analyse this crap!! DAMM</h3>", e);
         }
       });
     }(linkObj));
   });
 
-  $(document.body).on('mouseleave', '.killer-mini-icon', function(e) {
+  $(document.body).on('click', function(e) {
     hidePopup();
     $('.explosion-icon').hide();
   });
