@@ -21,6 +21,28 @@ Api.prototype.getInfo = function(linkObj, cb) {
     return cb(cache[linkObj.id]);
   }
 
+  let href = linkObj.href;
+  let fb = 'https://l.facebook.com/l.php?u=';
+  if(href.startsWith(fb)) {
+    href = href.slice(fb.length);
+
+    href = decodeURIComponent(href);
+
+
+    console.log('Started with fb', href);
+
+  }
+
+  href = decodeURIComponent(href);
+
+  let altIndex = href.indexOf('&');
+
+  if(altIndex !== -1) {
+    href = href.slice(0, altIndex);
+  }
+
+  console.log('Href = ', href);
+
   chrome.runtime.sendMessage({
            method: 'POST',
            action: 'xhttp',
@@ -28,7 +50,7 @@ Api.prototype.getInfo = function(linkObj, cb) {
            url: 'http://localhost:8080/v1/summary',
            data: JSON.stringify({
              text: linkObj.text,
-             url: linkObj.href
+             url: href
            }),
          }, function(resp) {
 
@@ -86,8 +108,14 @@ let fetchLinkAnalysis = function() {
       link.setAttribute('data-killer-id', id);
     }
 
+    let href = link.href;
+    let fb = 'https://l.facebook.com/l.php?u=';
+    if(href.startsWith(fb)) {
+      href = href.slice(fb.length);
+    }
+
     return {
-      href: link.href,
+      href: href,
       text: link.innerText,
       id: parseInt(id),
     }
@@ -135,7 +163,9 @@ let fetchLinkAnalysis = function() {
 
 };
 
-fetchLinkAnalysis();
+setTimeout(function() {
+  fetchLinkAnalysis();
+}, 2000);
 setInterval(fetchLinkAnalysis, 10000);
 
 
