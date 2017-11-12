@@ -15,22 +15,27 @@ const Api = function() {
 
 let cache = {};
 
-Api.prototype.getInfo = function(id, link, cb) {
+Api.prototype.getInfo = function(linkObj, cb) {
 
-  if(cache[id]) {
-    return cb(cache[id]);
+  if(cache[linkObj.id]) {
+    return cb(cache[linkObj.id]);
   }
+
+  console.log(linkObj);
 
   chrome.runtime.sendMessage({
            method: 'POST',
            action: 'xhttp',
-           contentType:'text/plain',
-           url: 'http://localhost:8080/v2/summary',
-           data: link,
+           contentType:'application/json',
+           url: 'http://localhost:8080/v1/summary',
+           data: JSON.stringify({
+             text: linkObj.text,
+             url: linkObj.href
+           }),
          }, function(resp) {
 
         console.log('RESP', resp);
-        cache[id] = resp;
+        cache[linkObj.id] = resp;
         cb(resp);
   });
 };
@@ -41,7 +46,7 @@ Api.prototype.getScores = function(links, cb) {
   chrome.runtime.sendMessage({
                                method: 'POST',
                                action: 'xhttp',
-                               url: 'http://localhost:8080/v2/detect',
+                               url: 'http://localhost:8080/v1/detect',
                                contentType:'application/json',
                                data: JSON.stringify(links),
                              }, function(response) {
@@ -117,19 +122,23 @@ let fetchLinkAnalysis = function() {
   });
 
 
-  api.getScores(linksToSendForScoring, function(scores) {
-    console.log('SCORES', scores);
+  if(linksToSendForScoring.length > 0) {
 
-    scores.forEach(score => {
+    api.getScores(linksToSendForScoring, function(scores) {
+      console.log('SCORES', scores);
 
-      linksScored[score.id] = score;
+      scores.forEach(score => {
 
-      if(score.score > 0.5) {
-        updatLinkUI(score.id, score.score);
-      }
+        linksScored[score.id] = score;
+
+        if(score.score > 0.5) {
+          updatLinkUI(score.id, score.score);
+        }
+      });
+
     });
+  }
 
-  });
 
 };
 
@@ -210,12 +219,18 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
 
     $('.explosion-icon[data-id='+id+']').show();
 
-    (function(linkAnalysed) {
-      api.getInfo(linkAnalysed.id, linkAnalysed.href, function(html) {
+    let linkObj = cleanLinks.find(el => {return el.id == id});
 
-        renderPopup(html, e);
+    (function(linkObj) {
+      api.getInfo(linkObj, function(obj) {
+
+        if(obj && obj.summary) {
+          renderPopup(obj.summary, e);
+        } else {
+          renderPopup('<h3>This website is all images!! DAMM</h3>');
+        }
       });
-    }(linkAnalysed));
+    }(linkObj));
   });
 
   $(document.body).on('mouseleave', '.killer-mini-icon', function(e) {
@@ -224,6 +239,7 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
   });
 
 
+  let firstDone = false;
   let animateKiller = function() {
     let left = parseInt(Math.random()*100);
     let top = parseInt(Math.random()*100);
@@ -234,11 +250,13 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
 
     let opacity = Math.random() < 0.3 ? 0 : 1;
 
+    if(!firstDone) {
+      firstDone = true;
+      duration = 2000;
+    }
     if(opacity == 0) {
       duration = 1500;
     }
-
-    console.log('Animation duration', duration);
 
     $('#killer-icon').css({
       left:left+"%", top: top+"%", 'transform': 'rotate('+deg+'deg)', opacity:opacity, width: width, transition: 'all '+duration/1000+'s'
