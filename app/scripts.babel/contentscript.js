@@ -190,10 +190,12 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
 
     $summary.html(html);
 
+    let offset = $(e.target).offset();
+
     $killerPopup.css({
                        'border': '1px solid '+color,
-                       'left': e.target.offsetLeft,
-                       'top': e.target.offsetTop+40
+                       'left': offset.left,
+                       'top': offset.top + 40
     }).show();
 
   }
@@ -220,7 +222,7 @@ $.get(chrome.extension.getURL('/html/clickbait-killer.html'), function(data) {
         if(obj && obj.summary) {
           renderPopup(obj.summary, e);
         } else {
-          renderPopup("<h3>Can't analyse this crap!! DAMM</h3>", e);
+          renderPopup("<h3>This article is too short: don't waste your brain!</h3>", e);
         }
       });
     }(linkObj));
